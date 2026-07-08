@@ -1,6 +1,8 @@
 project_doc.md
-Search-R1_datasets_reference.docx
 .claude/
+claude_code_tasks.md
+docs/Search-R1_datasets_reference_v2.docx
+# env
 .env
 # generated / cache
 data/
