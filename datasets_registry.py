@@ -34,17 +34,17 @@ DATASETS = {
         "hop": "single",
         "enabled": True,
     },
-    "simpleqa": {
-        # NOTE: SimpleQA is NOT on the FlashRAG hub and is NOT scored with EM.
-        # Native eval is an LLM grader (3-way: correct / incorrect / not_attempted),
-        # per openai/simple-evals. Source: basicv8vc/SimpleQA (HF) or the
-        # OpenAI simple-evals CSV, not FlashRAG. Disabled until
-        # evaluation/simpleqa_judge.py is implemented.
+    "simpleqa_verified": {
+        # NOTE: not on the FlashRAG hub -- loaded from the HF hub directly
+        # (google/simpleqa-verified). Not EM-scored: native eval is a GPT-4.1
+        # LLM grader (3-way: correct / incorrect / not_attempted), per
+        # openai/simple-evals grading convention. See evaluation/simpleqa_judge.py.
         "dir": None,
-        "eval_split": "test",
+        "hf_repo": "google/simpleqa-verified",
+        "eval_split": "eval",
         "metric": "llm_judge",
         "hop": "single",
-        "enabled": False,
+        "enabled": True,
     },
     "hotpotqa": {
         "dir": "hotpotqa",

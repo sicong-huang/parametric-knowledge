@@ -8,6 +8,7 @@ dependencies = [
     "transformers>=4.46.0",
     "datasets>=3.0.0",
     "huggingface_hub>=0.25.0",
+    "openai>=1.0",
 ]
 
 [tool.uv]

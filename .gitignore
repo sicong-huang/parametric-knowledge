@@ -1,7 +1,7 @@
 project_doc.md
 Search-R1_datasets_reference.docx
 .claude/
-
+.env
 # generated / cache
 data/
 experiment/*/outputs/

@@ -5,11 +5,12 @@ import argparse
 import json
 import pathlib
 
+from datasets_registry import DATASETS
 from evaluation.metrics import cover_em, exact_match
+from evaluation.simpleqa_judge import score_simpleqa
 
 
-def score_file(outputs_path: pathlib.Path, eval_path: pathlib.Path, dataset: str) -> dict:
-    eval_path.parent.mkdir(parents=True, exist_ok=True)
+def _score_file_em(outputs_path: pathlib.Path, eval_path: pathlib.Path, dataset: str) -> dict:
     n = 0
     em_sum = 0
     cover_sum = 0
@@ -34,14 +35,39 @@ def score_file(outputs_path: pathlib.Path, eval_path: pathlib.Path, dataset: str
             cover_sum += cov
             len_sum += out_len
 
-    summary = {
+    return {
         "dataset": dataset,
+        "metric": "em",
         "n": n,
         "em": em_sum / n if n else 0.0,
         "cover_em": cover_sum / n if n else 0.0,
         "avg_output_len": len_sum / n if n else 0.0,
     }
-    return summary
+
+
+def _score_file_llm_judge(outputs_path: pathlib.Path, eval_path: pathlib.Path, dataset: str) -> dict:
+    records = [json.loads(line) for line in open(outputs_path)]
+    result = score_simpleqa(records)
+    grades = result.pop("grades")
+
+    with open(eval_path, "w") as fout:
+        for rec, grade in zip(records, grades):
+            fout.write(json.dumps({
+                "id": rec["id"],
+                "predicted_answer": rec["predicted_answer"],
+                "golden_answers": rec["golden_answers"],
+                "grade": grade,
+            }) + "\n")
+
+    return {"dataset": dataset, "metric": "llm_judge", **result}
+
+
+def score_file(outputs_path: pathlib.Path, eval_path: pathlib.Path, dataset: str) -> dict:
+    eval_path.parent.mkdir(parents=True, exist_ok=True)
+    metric = DATASETS[dataset]["metric"]
+    if metric == "llm_judge":
+        return _score_file_llm_judge(outputs_path, eval_path, dataset)
+    return _score_file_em(outputs_path, eval_path, dataset)
 
 
 def main():
