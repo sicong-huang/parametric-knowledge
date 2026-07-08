@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info/
+build/
+dist/
+wheels/
+
+# Virtual environments
+.venv/
+venv/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# HuggingFace / model caches
+.cache/
+.huggingface/
+
+# Logs
+*.log
+
+# Generated datasets (large)
+syndata_archive/data/
