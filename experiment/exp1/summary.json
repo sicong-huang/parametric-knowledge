@@ -1,0 +1,57 @@
+{
+  "exp_id": "E001",
+  "model": "Qwen/Qwen3-4B",
+  "condition": "direct",
+  "n_examples": 500,
+  "results": [
+    {
+      "dataset": "nq",
+      "n": 500,
+      "em": 0.106,
+      "cover_em": 0.194,
+      "avg_output_len": 6.402
+    },
+    {
+      "dataset": "triviaqa",
+      "n": 500,
+      "em": 0.27,
+      "cover_em": 0.338,
+      "avg_output_len": 4.328
+    },
+    {
+      "dataset": "popqa",
+      "n": 500,
+      "em": 0.124,
+      "cover_em": 0.158,
+      "avg_output_len": 5.172
+    },
+    {
+      "dataset": "hotpotqa",
+      "n": 500,
+      "em": 0.158,
+      "cover_em": 0.192,
+      "avg_output_len": 5.604
+    },
+    {
+      "dataset": "2wikimultihopqa",
+      "n": 500,
+      "em": 0.24,
+      "cover_em": 0.264,
+      "avg_output_len": 6.93
+    },
+    {
+      "dataset": "musique",
+      "n": 500,
+      "em": 0.018,
+      "cover_em": 0.036,
+      "avg_output_len": 17.958
+    },
+    {
+      "dataset": "bamboogle",
+      "n": 125,
+      "em": 0.032,
+      "cover_em": 0.056,
+      "avg_output_len": 6.488
+    }
+  ]
+}

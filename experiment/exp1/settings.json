@@ -1,0 +1,21 @@
+{
+  "exp_id": "E001",
+  "model": "Qwen/Qwen3-4B",
+  "condition": "direct",
+  "decoding": {
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "max_tokens": 500
+  },
+  "n_examples": 500,
+  "seed": 0,
+  "datasets": [
+    "nq",
+    "triviaqa",
+    "popqa",
+    "hotpotqa",
+    "2wikimultihopqa",
+    "musique",
+    "bamboogle"
+  ]
+}

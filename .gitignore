@@ -1,0 +1,13 @@
+project_doc.md
+Search-R1_datasets_reference.docx
+.claude/
+
+# generated / cache
+data/
+experiment/*/outputs/
+experiment/*/eval/
+experiment/*/run.log
+__pycache__/
+*.pyc
+.venv/
+uv.lock
