@@ -5,6 +5,7 @@ convention, per the Kaggle starter notebook for SimpleQA Verified:
 https://www.kaggle.com/code/nanliao7/simpleqa-verified-benchmark-starter-code
 """
 import os
+import re
 
 GRADER_TEMPLATE = """
 Your job is to look at a question, a gold target, and a predicted answer, and then assign a grade of either ["CORRECT", "INCORRECT", "NOT_ATTEMPTED"].
@@ -98,32 +99,47 @@ CHOICE_STRINGS = ["CORRECT", "INCORRECT", "NOT_ATTEMPTED"]
 CHOICE_LETTER_TO_STRING = dict(zip(CHOICE_LETTERS, CHOICE_STRINGS))
 DEFAULT_GRADE_IF_UNPARSEABLE = "C"  # NOT_ATTEMPTED
 
-GRADER_MODEL = "gpt-4.1"
+GRADER_MODEL = os.environ.get("JUDGE_MODEL", "gpt-4.1-2025-04-14")
 
 
 def grade(question: str, gold: str, predicted: str) -> str:
-    """Grade one (question, gold, predicted) triple with GPT-4.1.
+    """Grade one (question, gold, predicted) triple with the judge model.
+
+    Defaults to GPT-4.1 via OpenAI. Set OPENAI_BASE_URL to point at a
+    locally hosted vLLM server instead (to avoid API cost at scale).
 
     Returns one of "correct" / "incorrect" / "not_attempted".
     """
     api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    base_url = os.environ.get("OPENAI_BASE_URL")
+    if not api_key and not base_url:
         raise RuntimeError(
             "OPENAI_API_KEY not set; required for the SimpleQA Verified GPT-4.1 autorater."
         )
 
     from openai import OpenAI
 
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key, base_url=base_url)
     prompt = GRADER_TEMPLATE.format(question=question, target=gold, predicted_answer=predicted)
     response = client.chat.completions.create(
         model=GRADER_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
     )
-    letter = response.choices[0].message.content.strip()
-    if letter not in CHOICE_LETTER_TO_STRING:
-        letter = DEFAULT_GRADE_IF_UNPARSEABLE
+    text = response.choices[0].message.content.strip()
+    match = re.search(r"(A|B|C)", text)
+    if match:
+        letter = match.group(0)
+    else:
+        upper = text.upper()
+        if "CORRECT" in upper and "INCORRECT" not in upper:
+            letter = "A"
+        elif "INCORRECT" in upper:
+            letter = "B"
+        elif "NOT_ATTEMPTED" in upper or "NOT ATTEMPTED" in upper:
+            letter = "C"
+        else:
+            letter = DEFAULT_GRADE_IF_UNPARSEABLE
     return CHOICE_LETTER_TO_STRING[letter].lower()
 
 
