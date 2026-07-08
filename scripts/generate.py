@@ -2,6 +2,9 @@
 
 Usage:
     uv run python scripts/generate.py --dataset nq --exp exp1
+
+If running this directly (not via scripts/run_exp.sh), prefix with
+VLLM_USE_FLASHINFER_SAMPLER=0 -- see the comment in run_exp.sh for why.
 """
 import argparse
 import json

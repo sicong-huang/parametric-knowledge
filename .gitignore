@@ -11,3 +11,7 @@ __pycache__/
 *.pyc
 .venv/
 uv.lock
+
+# generated report(s) in docs/
+docs/*.html
+docs/**/*.html

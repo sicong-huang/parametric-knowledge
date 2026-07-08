@@ -26,6 +26,14 @@ if tmux has-session -t "${SESSION}" 2>/dev/null; then
 fi
 
 mkdir -p "${EXP_DIR}"
+# VLLM_USE_FLASHINFER_SAMPLER=0: this machine's PATH resolves nvcc to a stray
+# nvidia-cuda-toolkit package (CUDA 12.0) instead of the real cuda-nvcc-12-8
+# install. flashinfer's top-p/top-k sampler kernel JIT-compiles against CUB
+# and needs BlockAdjacentDifference::FlagHeads, which that old toolkit's CUB
+# lacks -> vLLM engine crashes on startup. Disabling the flashinfer sampler
+# skips that JIT path entirely. If calling scripts/generate.py or
+# scripts/run_all.py directly (outside this wrapper) for debugging, prefix
+# the same env var or you'll hit the same crash.
 tmux new-session -d -s "${SESSION}" \
     "cd '${REPO_ROOT}' && set -o pipefail; VLLM_USE_FLASHINFER_SAMPLER=0 uv run python scripts/run_all.py --exp '${EXP}' 2>&1 | tee '${LOG}'"
 
