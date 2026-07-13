@@ -143,6 +143,59 @@ def grade(question: str, gold: str, predicted: str) -> str:
     return CHOICE_LETTER_TO_STRING[letter].lower()
 
 
+def grade_multi(question: str, golds: list[str], predicted: str) -> str:
+    """Like grade(), but the gold target is formatted from a full alias list
+    (joined with "OR") so the judge sees every acceptable surface form -- needed
+    for alias-rich EM datasets (e.g. TriviaQA) where golden_answers has multiple
+    entries. Delegates to grade() for the actual call."""
+    target = " OR ".join(golds)
+    return grade(question, target, predicted)
+
+
+def score_judge(records: list[dict]) -> dict:
+    """Like score_simpleqa, but grades against the full golden_answers alias list
+    via grade_multi instead of golden_answers[0]. Used as a co-primary semantic
+    metric alongside EM on the 7 EM datasets (not a replacement for EM).
+
+    records: list of {"question", "golden_answers": [str], "predicted_answer"}.
+    Returns summary dict with label counts, judge_accuracy (= n_correct / n), and
+    accuracy_given_attempted / f1 for parity with score_simpleqa.
+    """
+    n = len(records)
+    n_correct = n_incorrect = n_not_attempted = 0
+    graded = []
+    for rec in records:
+        label = grade_multi(rec["question"], rec["golden_answers"], rec["predicted_answer"])
+        graded.append(label)
+        if label == "correct":
+            n_correct += 1
+        elif label == "incorrect":
+            n_incorrect += 1
+        else:
+            n_not_attempted += 1
+
+    attempted = n_correct + n_incorrect
+    accuracy_given_attempted = n_correct / attempted if attempted else 0.0
+    judge_accuracy = n_correct / n if n else 0.0
+    f1 = (
+        2 * accuracy_given_attempted * judge_accuracy / (accuracy_given_attempted + judge_accuracy)
+        if (accuracy_given_attempted + judge_accuracy)
+        else 0.0
+    )
+
+    return {
+        "n": n,
+        "n_correct": n_correct,
+        "n_incorrect": n_incorrect,
+        "n_not_attempted": n_not_attempted,
+        "attempted": attempted,
+        "accuracy_given_attempted": accuracy_given_attempted,
+        "judge_accuracy": judge_accuracy,
+        "f1": f1,
+        "grades": graded,
+    }
+
+
 def score_simpleqa(records: list[dict]) -> dict:
     """records: list of {"question", "golden_answers": [str], "predicted_answer"}.
 

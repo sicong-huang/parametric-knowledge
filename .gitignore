@@ -2,6 +2,7 @@ project_doc.md
 .claude/
 claude_code_tasks.md
 docs/Search-R1_datasets_reference_v2.docx
+eval_metrics_research.md
 # env
 .env
 # generated / cache

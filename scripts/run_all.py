@@ -48,7 +48,11 @@ def main():
         print(f"[eval] {name}")
         outputs_path = exp_dir / "outputs" / f"{name}.jsonl"
         eval_path = exp_dir / "eval" / f"{name}.jsonl"
-        summary = score_file(outputs_path, eval_path, name)
+        summary = score_file(
+            outputs_path, eval_path, name,
+            judge=settings.get("judge", False),
+            ex_recall=settings.get("ex_recall", False),
+        )
         print(json.dumps(summary, indent=2))
         summaries.append(summary)
 

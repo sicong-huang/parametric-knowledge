@@ -9,6 +9,8 @@
   },
   "n_examples": 500,
   "seed": 0,
+  "judge": false,
+  "ex_recall": false,
   "datasets": [
     "nq",
     "triviaqa",

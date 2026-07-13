@@ -3,11 +3,19 @@
 import re
 
 THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+THINK_CONTENT_RE = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 ANSWER_RE = re.compile(r"<answer>(.*?)</answer>", re.DOTALL)
 
 
 def strip_think(text: str) -> str:
     return THINK_RE.sub("", text)
+
+
+def extract_think(text: str) -> str:
+    """Return the concatenated content of all <think>...</think> blocks
+    (the reasoning trace), or "" if none are present (e.g. direct condition)."""
+    matches = THINK_CONTENT_RE.findall(text)
+    return "\n".join(m.strip() for m in matches)
 
 
 def extract_answer(text: str) -> str:
