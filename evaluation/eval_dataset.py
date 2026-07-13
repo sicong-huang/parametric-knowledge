@@ -11,7 +11,7 @@ import pathlib
 from datasets_registry import DATASETS
 from evaluation.ex_recall import score_ex_recall
 from evaluation.metrics import cover_em, exact_match
-from evaluation.parse import extract_think
+from evaluation.parse import extract_think, has_answer_tag
 from evaluation.simpleqa_judge import score_judge, score_simpleqa
 
 
@@ -26,6 +26,7 @@ def _score_file_em(
     em_sum = 0
     cover_sum = 0
     len_sum = 0
+    ext_fail_sum = 0
     records = []
     per_record = []
     with open(outputs_path) as fin:
@@ -37,12 +38,14 @@ def _score_file_em(
             em = exact_match(pred, golds)
             cov = cover_em(pred, golds)
             out_len = len(raw_output.split())
+            ext_fail = int(not has_answer_tag(raw_output))
             per_record.append({
                 "id": rec["id"],
                 "predicted_answer": pred,
                 "golden_answers": golds,
                 "em": em,
                 "cover_em": cov,
+                "extraction_failure": ext_fail,
                 "raw_output": raw_output,
                 "reasoning_trace": extract_think(raw_output),
             })
@@ -51,6 +54,7 @@ def _score_file_em(
             em_sum += em
             cover_sum += cov
             len_sum += out_len
+            ext_fail_sum += ext_fail
 
     summary = {
         "dataset": dataset,
@@ -59,6 +63,7 @@ def _score_file_em(
         "em": em_sum / n if n else 0.0,
         "cover_em": cover_sum / n if n else 0.0,
         "avg_output_len": len_sum / n if n else 0.0,
+        "extraction_failure_rate": ext_fail_sum / n if n else 0.0,
     }
 
     if judge:
@@ -94,18 +99,24 @@ def _score_file_llm_judge(outputs_path: pathlib.Path, eval_path: pathlib.Path, d
     result = score_simpleqa(records)
     grades = result.pop("grades")
 
+    ext_fail_sum = 0
     with open(eval_path, "w") as fout:
         for rec, grade in zip(records, grades):
             raw_output = rec.get("raw_output", rec["predicted_answer"])
+            ext_fail = int(not has_answer_tag(raw_output))
+            ext_fail_sum += ext_fail
             fout.write(json.dumps({
                 "id": rec["id"],
                 "predicted_answer": rec["predicted_answer"],
                 "golden_answers": rec["golden_answers"],
                 "grade": grade,
+                "extraction_failure": ext_fail,
                 "raw_output": raw_output,
                 "reasoning_trace": extract_think(raw_output),
             }) + "\n")
 
+    n = len(records)
+    result["extraction_failure_rate"] = ext_fail_sum / n if n else 0.0
     return {"dataset": dataset, "metric": "llm_judge", **result}
 
 

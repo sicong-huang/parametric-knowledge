@@ -114,12 +114,12 @@ def refine_answer(predicted: str) -> str:
 
     client = OpenAI(api_key=api_key, base_url=base_url)
     prompt = REFINE_PROMPT.format(answer=predicted)
-    response = client.chat.completions.create(
+    response = client.responses.create(
         model=EXTRACTOR_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
+        reasoning={"effort": "medium"},
+        input=[{"role": "user", "content": prompt}],
     )
-    return response.choices[0].message.content.strip()
+    return response.output_text.strip()
 
 
 def score_ex_recall(records: list[dict]) -> dict:

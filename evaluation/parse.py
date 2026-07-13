@@ -25,3 +25,11 @@ def extract_answer(text: str) -> str:
     if matches:
         return matches[-1].strip()
     return strip_think(text).strip()
+
+
+def has_answer_tag(text: str) -> bool:
+    """True if an <answer>...</answer> tag is present (extract_answer would NOT
+    fall back). Extraction failure = not has_answer_tag(raw_output) -- a
+    diagnostic for the format-vs-recall confound between conditions (see
+    eval_metrics_research.md §5)."""
+    return ANSWER_RE.search(text) is not None
