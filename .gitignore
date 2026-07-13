@@ -33,3 +33,5 @@ venv/
 
 # Generated datasets (large)
 syndata_archive/data/
+
+notes.md
