@@ -23,8 +23,14 @@ uv run python -m evaluation.eval_dataset --dataset nq --outputs experiment/exp1/
 # one-command generate+eval for every dataset in an experiment's settings.json
 uv run python scripts/run_all.py --exp exp1
 
+# re-score existing outputs without regenerating (e.g. after changing judge_model/eval_base_url)
+uv run python scripts/run_all.py --exp exp1 --eval-only
+
 # preferred: launch the full run detached in tmux (survives long GPU jobs)
 bash scripts/run_exp.sh exp1
+
+# start the local judge/ex-recall server (must be running first for exps with judge/ex_recall enabled)
+bash scripts/serve_judge.sh
 ```
 
 **Always run `scripts/generate.py` / `scripts/run_all.py` with `VLLM_USE_FLASHINFER_SAMPLER=0`** (or via `scripts/run_exp.sh`, which sets it). This machine's PATH resolves `nvcc` to a stray `nvidia-cuda-toolkit` package instead of the real `cuda-nvcc-12-8`, so flashinfer's sampler kernel fails to JIT-compile and crashes the vLLM engine on startup. Disabling the flashinfer sampler skips that path.
@@ -49,7 +55,11 @@ For long GPU runs, use the `run-experiment` skill (`.claude/skills/run-experimen
 
 Both reuse the `OPENAI_BASE_URL` → local-vLLM override pattern for cost-safe scale (e.g. an open-weight judge like Qwen2.5-72B-Instruct).
 
+**Local judge server:** exp3–exp10 point `eval_base_url` at `http://localhost:8000/v1` (`judge_model`/`extractor_model`: `gemma-4-31b-it`), served locally via `scripts/serve_judge.sh` — `google/gemma-4-31b-it`, fp8 quantization, pinned to GPU1 (`CUDA_VISIBLE_DEVICES=1`), `--max-model-len 40960` (must be large enough to hold a full reasoning-condition `<think>` trace embedded in the grading prompt, or vLLM 400s and crashes `run_all.py`). Must be running (`bash scripts/serve_judge.sh`, wait for `Uvicorn running` in `experiment/judge_server.log`) before launching any exp with `judge`/`ex_recall` enabled. Replaced an earlier remote MLX judge on a separate Mac (`mlx-community/gemma-4-31b-it-nvfp4`) — moved local for speed; fp8 is not a precision regression vs. that 4-bit build.
+
 **Experiment convention:** each `experiment/expN/` has `settings.json` (model, condition `direct`|`reasoning`, decoding params, `n_examples`, `seed`, `judge`/`ex_recall` toggles, dataset list, `exp_id` linking back to `project_doc.md`'s Experiment Log), `outputs/` (raw generations, never overwritten by scoring), `eval/` (scored per-example results), `run.log`, and `summary.json`. To add a new experiment: copy `experiment/exp1/` → `experiment/expN/`, edit `settings.json`, copy `docs/experiments/template.md` → `expN.md`, add a row to `docs/README.md`'s index table.
+
+**When an experiment finishes:** fill in `docs/experiments/expN.md`'s `status` frontmatter and `Result`/`What we learned`/`Decision` fields (pattern: `docs/experiments/exp1.md`) from the run's `summary.json`, and flip its row's `Status` to `Done` in `docs/README.md`. Do this for every finished run, not just the newest — a `Planned`/`Running` doc for a run that already has a populated `summary.json` is stale.
 
 **Prompting condition** (`direct` vs `reasoning`) is controlled by `enable_thinking` passed to the tokenizer's chat template in `scripts/generate.py`, not by a different system prompt — the same `SYSTEM_PROMPT` (answer-then-wrap-in-`<answer>` tags) is used for both conditions.
 

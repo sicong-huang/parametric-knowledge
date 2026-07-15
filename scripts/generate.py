@@ -64,11 +64,7 @@ def run_vllm(model: str, prompts: list[str], enable_thinking: bool, decoding: di
         chat_prompts.append(text)
 
     llm = LLM(model=model)
-    sampling_params = SamplingParams(
-        temperature=decoding["temperature"],
-        top_p=decoding["top_p"],
-        max_tokens=decoding["max_tokens"],
-    )
+    sampling_params = SamplingParams(**decoding)
     outputs = llm.generate(chat_prompts, sampling_params)
     # vLLM preserves input order
     return [o.outputs[0].text for o in outputs], chat_prompts

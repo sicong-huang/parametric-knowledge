@@ -16,11 +16,13 @@ normalize_answer here is intentionally a local, richer variant (handles unicode
 dashes, underscores, curly apostrophes) than evaluation/metrics.py's normalize_answer
 -- kept separate so it never perturbs the strict-EM comparability anchor.
 """
+import concurrent.futures
 import os
 import re
 import string
 
-EXTRACTOR_MODEL = os.environ.get("EXTRACTOR_MODEL", "gpt-5-mini-2025-08-07")
+DEFAULT_EXTRACTOR_MODEL = "gpt-5-mini-2025-08-07"
+EX_RECALL_CONCURRENCY = int(os.environ.get("EX_RECALL_CONCURRENCY", "16"))
 
 # Verbatim few-shot refine prompt from the reference Ex-Recall.py.
 REFINE_PROMPT = """
@@ -101,8 +103,11 @@ def recall_score(prediction: str, ground_truths: list[str]) -> bool:
 
 def refine_answer(predicted: str) -> str:
     """One LM call to collapse a hedged/multi-candidate extraction to a single
-    committed answer span. Uses OPENAI_BASE_URL to allow a local vLLM server
-    instead of paying per-call API cost at scale."""
+    committed answer span. Uses OPENAI_BASE_URL to allow a local vLLM/MLX
+    server instead of paying per-call API cost at scale.
+
+    Uses chat.completions (not the Responses API) so this also works against
+    OpenAI-compatible servers that don't implement /v1/responses (e.g. MLX)."""
     api_key = os.environ.get("OPENAI_API_KEY")
     base_url = os.environ.get("OPENAI_BASE_URL")
     if not api_key and not base_url:
@@ -112,14 +117,14 @@ def refine_answer(predicted: str) -> str:
 
     from openai import OpenAI
 
-    client = OpenAI(api_key=api_key, base_url=base_url)
+    client = OpenAI(api_key=api_key or "EMPTY", base_url=base_url)
     prompt = REFINE_PROMPT.format(answer=predicted)
-    response = client.responses.create(
-        model=EXTRACTOR_MODEL,
-        reasoning={"effort": "medium"},
-        input=[{"role": "user", "content": prompt}],
+    response = client.chat.completions.create(
+        model=os.environ.get("EXTRACTOR_MODEL", DEFAULT_EXTRACTOR_MODEL),
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
     )
-    return response.output_text.strip()
+    return response.choices[0].message.content.strip()
 
 
 def score_ex_recall(records: list[dict]) -> dict:
@@ -131,29 +136,31 @@ def score_ex_recall(records: list[dict]) -> dict:
     n = len(records)
     n_recalled = 0
     n_skipped = 0
-    refined_answers = []
-    recalled_flags = []
-    skipped_flags = []
+    refined_answers: list[str] = [""] * n
+    recalled_flags: list[bool] = [False] * n
+    skipped_flags: list[bool] = [False] * n
 
-    for rec in records:
+    to_refine = []
+    for i, rec in enumerate(records):
         predicted = rec.get("predicted_answer", "")
-        golds = rec["golden_answers"]
-
         if not predicted:
-            refined_answers.append("")
-            recalled_flags.append(False)
-            skipped_flags.append(True)
+            skipped_flags[i] = True
             n_skipped += 1
-            continue
+        else:
+            to_refine.append(i)
 
+    def refine_one(i: int) -> tuple[int, str, bool]:
+        predicted = records[i].get("predicted_answer", "")
+        golds = records[i]["golden_answers"]
         refined = refine_answer(predicted)
-        recalled = recall_score(refined, golds)
+        return i, refined, recall_score(refined, golds)
 
-        refined_answers.append(refined)
-        recalled_flags.append(recalled)
-        skipped_flags.append(False)
-        if recalled:
-            n_recalled += 1
+    with concurrent.futures.ThreadPoolExecutor(max_workers=EX_RECALL_CONCURRENCY) as pool:
+        for i, refined, recalled in pool.map(refine_one, to_refine):
+            refined_answers[i] = refined
+            recalled_flags[i] = recalled
+            if recalled:
+                n_recalled += 1
 
     return {
         "n": n,

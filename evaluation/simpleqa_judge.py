@@ -4,8 +4,11 @@ Grading prompt and F1 formula copied verbatim from the openai/simple-evals
 convention, per the Kaggle starter notebook for SimpleQA Verified:
 https://www.kaggle.com/code/nanliao7/simpleqa-verified-benchmark-starter-code
 """
+import concurrent.futures
 import os
 import re
+
+JUDGE_CONCURRENCY = int(os.environ.get("JUDGE_CONCURRENCY", "16"))
 
 GRADER_TEMPLATE = """
 Your job is to look at a question, a gold target, and a predicted answer, and then assign a grade of either ["CORRECT", "INCORRECT", "NOT_ATTEMPTED"].
@@ -99,7 +102,7 @@ CHOICE_STRINGS = ["CORRECT", "INCORRECT", "NOT_ATTEMPTED"]
 CHOICE_LETTER_TO_STRING = dict(zip(CHOICE_LETTERS, CHOICE_STRINGS))
 DEFAULT_GRADE_IF_UNPARSEABLE = "C"  # NOT_ATTEMPTED
 
-GRADER_MODEL = os.environ.get("JUDGE_MODEL", "gpt-4.1-2025-04-14")
+DEFAULT_GRADER_MODEL = "gpt-4.1-2025-04-14"
 
 
 def grade(question: str, gold: str, predicted: str) -> str:
@@ -119,10 +122,10 @@ def grade(question: str, gold: str, predicted: str) -> str:
 
     from openai import OpenAI
 
-    client = OpenAI(api_key=api_key, base_url=base_url)
+    client = OpenAI(api_key=api_key or "EMPTY", base_url=base_url)
     prompt = GRADER_TEMPLATE.format(question=question, target=gold, predicted_answer=predicted)
     response = client.chat.completions.create(
-        model=GRADER_MODEL,
+        model=os.environ.get("JUDGE_MODEL", DEFAULT_GRADER_MODEL),
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
     )
@@ -163,10 +166,15 @@ def score_judge(records: list[dict]) -> dict:
     """
     n = len(records)
     n_correct = n_incorrect = n_not_attempted = 0
-    graded = []
-    for rec in records:
-        label = grade_multi(rec["question"], rec["golden_answers"], rec["predicted_answer"])
-        graded.append(label)
+    graded = [None] * n
+    with concurrent.futures.ThreadPoolExecutor(max_workers=JUDGE_CONCURRENCY) as pool:
+        futures = {
+            pool.submit(grade_multi, rec["question"], rec["golden_answers"], rec["predicted_answer"]): i
+            for i, rec in enumerate(records)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            graded[futures[future]] = future.result()
+    for label in graded:
         if label == "correct":
             n_correct += 1
         elif label == "incorrect":
@@ -204,10 +212,15 @@ def score_simpleqa(records: list[dict]) -> dict:
     """
     n = len(records)
     n_correct = n_incorrect = n_not_attempted = 0
-    graded = []
-    for rec in records:
-        label = grade(rec["question"], rec["golden_answers"][0], rec["predicted_answer"])
-        graded.append(label)
+    graded = [None] * n
+    with concurrent.futures.ThreadPoolExecutor(max_workers=JUDGE_CONCURRENCY) as pool:
+        futures = {
+            pool.submit(grade, rec["question"], rec["golden_answers"][0], rec["predicted_answer"]): i
+            for i, rec in enumerate(records)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            graded[futures[future]] = future.result()
+    for label in graded:
         if label == "correct":
             n_correct += 1
         elif label == "incorrect":

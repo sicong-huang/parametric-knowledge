@@ -8,6 +8,14 @@ Log) and planning doc. Update this row whenever a run's status changes.
 | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
 | `experiment/exp1/` | E001 | direct | Qwen/Qwen3-4B | nq, triviaqa, popqa, hotpotqa, 2wikimultihopqa, musique, bamboogle (500/set; simpleqa skipped, see note) | Done | [exp1.md](experiments/exp1.md) |
 | `experiment/exp2/` | E001 | reasoning | Qwen/Qwen3-4B | same as exp1 | Planned | [exp2.md](experiments/exp2.md) |
+| `experiment/exp3/` | E004 | direct | Qwen/Qwen3.5-2B | 7 EM datasets + simpleqa_verified (n=500 per dataset, bamboogle=125) | Done | [exp3.md](experiments/exp3.md) |
+| `experiment/exp4/` | E004 | reasoning | Qwen/Qwen3.5-2B | same as exp3 | Done | [exp4.md](experiments/exp4.md) |
+| `experiment/exp5/` | E005 | direct | Qwen/Qwen3.5-4B | same as exp3 | Done | [exp5.md](experiments/exp5.md) |
+| `experiment/exp6/` | E005 | reasoning | Qwen/Qwen3.5-4B | same as exp3 | Done | [exp6.md](experiments/exp6.md) |
+| `experiment/exp7/` | E006 | direct | Qwen/Qwen3.5-9B | same as exp3 | Done | [exp7.md](experiments/exp7.md) |
+| `experiment/exp8/` | E006 | reasoning | Qwen/Qwen3.5-9B | same as exp3 | Done | [exp8.md](experiments/exp8.md) |
+| `experiment/exp9/` | E007 | direct | google/gemma-4-E4B-it | same as exp3 | Done | [exp9.md](experiments/exp9.md) |
+| `experiment/exp10/` | E007 | reasoning | google/gemma-4-E4B-it | same as exp3 | Done | [exp10.md](experiments/exp10.md) |
 
 **Note:** `simpleqa` is registered but disabled (`datasets_registry.py`) --
 it needs an LLM-judge grader, not EM, and isn't on the FlashRAG hub. See

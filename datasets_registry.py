@@ -9,6 +9,10 @@ RC TriviaQA, MuSiQue-Ans vs full) -- verify against the specific FlashRAG file
 loaded, not headline numbers in project_doc.md.
 """
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 FLASHRAG_REPO = "RUC-NLPIR/FlashRAG_datasets"
 FLASHRAG_BASE_URL = f"https://huggingface.co/datasets/{FLASHRAG_REPO}/resolve/main"
 
