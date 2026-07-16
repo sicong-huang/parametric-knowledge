@@ -1,0 +1,23 @@
+project_doc.md
+.claude/
+claude_code_tasks.md
+docs/Search-R1_datasets_reference_v2.docx
+eval_metrics_research.md
+exp1_extraction_failure.md
+poor_hardware.md
+broke_budget.md
+# env
+.env
+# generated / cache
+data/
+experiment/*/outputs/
+experiment/*/eval/
+experiment/*/run.log
+__pycache__/
+*.pyc
+.venv/
+uv.lock
+
+# generated report(s) in docs/
+docs/*.html
+docs/**/*.html

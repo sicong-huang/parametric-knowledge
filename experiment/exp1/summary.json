@@ -1,0 +1,71 @@
+{
+  "exp_id": "E001",
+  "model": "Qwen/Qwen3-4B",
+  "condition": "direct",
+  "n_examples": 500,
+  "results": [
+    {
+      "dataset": "nq",
+      "metric": "em",
+      "n": 500,
+      "em": 0.106,
+      "cover_em": 0.194,
+      "avg_output_len": 6.402,
+      "extraction_failure_rate": 0.498
+    },
+    {
+      "dataset": "triviaqa",
+      "metric": "em",
+      "n": 500,
+      "em": 0.27,
+      "cover_em": 0.338,
+      "avg_output_len": 4.328,
+      "extraction_failure_rate": 0.734
+    },
+    {
+      "dataset": "popqa",
+      "metric": "em",
+      "n": 500,
+      "em": 0.124,
+      "cover_em": 0.158,
+      "avg_output_len": 5.172,
+      "extraction_failure_rate": 0.422
+    },
+    {
+      "dataset": "hotpotqa",
+      "metric": "em",
+      "n": 500,
+      "em": 0.158,
+      "cover_em": 0.192,
+      "avg_output_len": 5.604,
+      "extraction_failure_rate": 0.632
+    },
+    {
+      "dataset": "2wikimultihopqa",
+      "metric": "em",
+      "n": 500,
+      "em": 0.24,
+      "cover_em": 0.264,
+      "avg_output_len": 6.93,
+      "extraction_failure_rate": 0.678
+    },
+    {
+      "dataset": "musique",
+      "metric": "em",
+      "n": 500,
+      "em": 0.018,
+      "cover_em": 0.036,
+      "avg_output_len": 17.958,
+      "extraction_failure_rate": 0.458
+    },
+    {
+      "dataset": "bamboogle",
+      "metric": "em",
+      "n": 125,
+      "em": 0.032,
+      "cover_em": 0.056,
+      "avg_output_len": 6.488,
+      "extraction_failure_rate": 0.448
+    }
+  ]
+}
