@@ -16,6 +16,11 @@ Log) and planning doc. Update this row whenever a run's status changes.
 | `experiment/exp8/` | E006 | reasoning | Qwen/Qwen3.5-9B | same as exp3 | Done | [exp8.md](experiments/exp8.md) |
 | `experiment/exp9/` | E007 | direct | google/gemma-4-E4B-it | same as exp3 | Done | [exp9.md](experiments/exp9.md) |
 | `experiment/exp10/` | E007 | reasoning | google/gemma-4-E4B-it | same as exp3 | Done | [exp10.md](experiments/exp10.md) |
+| `experiment/exp11/` | E008 | direct | HuggingFaceTB/SmolLM3-3B | same as exp3 | Planned | [exp11.md](experiments/exp11.md) |
+| `experiment/exp12/` | E008 | reasoning | HuggingFaceTB/SmolLM3-3B | same as exp3 | Planned | [exp12.md](experiments/exp12.md) |
+| `experiment/exp13/` | E009 | direct | nvidia/NVIDIA-Nemotron-Nano-9B-v2 | same as exp3 | Planned | [exp13.md](experiments/exp13.md) |
+| `experiment/exp14/` | E009 | reasoning | nvidia/NVIDIA-Nemotron-Nano-9B-v2 | same as exp3 | Planned | [exp14.md](experiments/exp14.md) |
+| `experiment/misc/concise_reasoning_probe/` | -- (misc, not a formal exp) | reasoning | Qwen/Qwen3.5-4B | nq, popqa, hotpotqa (n=150 each) | Done | [README.md](../experiment/misc/concise_reasoning_probe/README.md) |
 
 **Note:** `simpleqa` is registered but disabled (`datasets_registry.py`) --
 it needs an LLM-judge grader, not EM, and isn't on the FlashRAG hub. See

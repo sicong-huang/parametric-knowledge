@@ -44,23 +44,44 @@ def build_prompts(examples: list[dict]) -> list[str]:
     return [f"Question: {ex['question']}" for ex in examples]
 
 
-def run_vllm(model: str, prompts: list[str], enable_thinking: bool, decoding: dict) -> list[str]:
+def run_vllm(
+    model: str,
+    prompts: list[str],
+    enable_thinking: bool,
+    decoding: dict,
+    toggle_style: str = "kwarg",
+) -> list[str]:
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
 
     tokenizer = AutoTokenizer.from_pretrained(model)
     chat_prompts = []
     for p in prompts:
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": p},
-        ]
-        text = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=enable_thinking,
-        )
+        if toggle_style == "sysprompt":
+            # Some models (e.g. SmolLM3, Nemotron-Nano) don't honor the
+            # enable_thinking kwarg -- they toggle reasoning via a /think or
+            # /no_think token in the system/user message instead.
+            system_content = SYSTEM_PROMPT + ("\n/think" if enable_thinking else "\n/no_think")
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": p},
+            ]
+            text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        else:
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": p},
+            ]
+            text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=enable_thinking,
+            )
         chat_prompts.append(text)
 
     llm = LLM(model=model)
@@ -82,9 +103,10 @@ def main():
     examples = load_examples(args.dataset, settings["n_examples"], settings["seed"])
     prompts = build_prompts(examples)
     enable_thinking = settings["condition"] == "reasoning"
+    toggle_style = settings.get("toggle_style", "kwarg")
 
     raw_outputs, chat_prompts = run_vllm(
-        settings["model"], prompts, enable_thinking, settings["decoding"]
+        settings["model"], prompts, enable_thinking, settings["decoding"], toggle_style
     )
 
     out_path = exp_dir / "outputs" / f"{args.dataset}.jsonl"

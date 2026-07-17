@@ -6,6 +6,8 @@ eval_metrics_research.md
 exp1_extraction_failure.md
 poor_hardware.md
 broke_budget.md
+scripts/probe_concise_reasoning.py
+qwen3.5-2B_verbosity.md
 # env
 .env
 # generated / cache
@@ -13,6 +15,7 @@ data/
 experiment/*/outputs/
 experiment/*/eval/
 experiment/*/run.log
+experiment/misc/
 __pycache__/
 *.pyc
 .venv/
