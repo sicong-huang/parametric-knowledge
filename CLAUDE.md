@@ -31,6 +31,13 @@ bash scripts/run_exp.sh exp1
 
 # start the local judge/ex-recall server (must be running first for exps with judge/ex_recall enabled)
 bash scripts/serve_judge.sh
+
+# git-fetch-style pull of the shared team Google Doc into project_doc.gdoc.md
+# (read-only, one-way; never overwrites project_doc.md or writes back to the
+# Doc — see scripts/misc/sync_gdoc.py docstring for one-time OAuth setup)
+uv run python scripts/misc/sync_gdoc.py fetch   # export Doc -> project_doc.gdoc.md
+uv run python scripts/misc/sync_gdoc.py diff    # show delta vs project_doc.md, to hand-compile
+uv run python scripts/misc/sync_gdoc.py status  # last-fetch time + whether a compile is pending
 ```
 
 **Always run `scripts/generate.py` / `scripts/run_all.py` with `VLLM_USE_FLASHINFER_SAMPLER=0`** (or via `scripts/run_exp.sh`, which sets it). This machine's PATH resolves `nvcc` to a stray `nvidia-cuda-toolkit` package instead of the real `cuda-nvcc-12-8`, so flashinfer's sampler kernel fails to JIT-compile and crashes the vLLM engine on startup. Disabling the flashinfer sampler skips that path.

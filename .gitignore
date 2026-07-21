@@ -1,4 +1,9 @@
 project_doc.md
+project_doc.gdoc.md
+credentials.json
+token.json
+sync_gdoc.json
+googledoc_sync_cheatsheet.md
 .claude/
 claude_code_tasks.md
 docs/Search-R1_datasets_reference_v2.docx
@@ -7,6 +12,7 @@ exp1_extraction_failure.md
 poor_hardware.md
 broke_budget.md
 scripts/probe_concise_reasoning.py
+scripts/misc/
 qwen3.5-2B_verbosity.md
 # env
 .env

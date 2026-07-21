@@ -1,0 +1,28 @@
+{
+  "exp_id": "E008",
+  "model": "HuggingFaceTB/SmolLM3-3B",
+  "condition": "reasoning",
+  "toggle_style": "sysprompt",
+  "decoding": {
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "max_tokens": 32768
+  },
+  "n_examples": 500,
+  "seed": 0,
+  "judge": true,
+  "ex_recall": true,
+  "datasets": [
+    "nq",
+    "triviaqa",
+    "popqa",
+    "hotpotqa",
+    "2wikimultihopqa",
+    "musique",
+    "bamboogle",
+    "simpleqa_verified"
+  ],
+  "eval_base_url": "http://localhost:8000/v1",
+  "judge_model": "gemma-4-31b-it",
+  "extractor_model": "gemma-4-31b-it"
+}

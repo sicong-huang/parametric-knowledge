@@ -18,8 +18,12 @@ Log) and planning doc. Update this row whenever a run's status changes.
 | `experiment/exp10/` | E007 | reasoning | google/gemma-4-E4B-it | same as exp3 | Done | [exp10.md](experiments/exp10.md) |
 | `experiment/exp11/` | E008 | direct | HuggingFaceTB/SmolLM3-3B | same as exp3 | Planned | [exp11.md](experiments/exp11.md) |
 | `experiment/exp12/` | E008 | reasoning | HuggingFaceTB/SmolLM3-3B | same as exp3 | Planned | [exp12.md](experiments/exp12.md) |
-| `experiment/exp13/` | E009 | direct | nvidia/NVIDIA-Nemotron-Nano-9B-v2 | same as exp3 | Planned | [exp13.md](experiments/exp13.md) |
-| `experiment/exp14/` | E009 | reasoning | nvidia/NVIDIA-Nemotron-Nano-9B-v2 | same as exp3 | Planned | [exp14.md](experiments/exp14.md) |
+| `experiment/exp13/` | E009 | direct | nvidia/NVIDIA-Nemotron-Nano-9B-v2 | same as exp3 | Done | [exp13.md](experiments/exp13.md) |
+| `experiment/exp14/` | E009 | reasoning | nvidia/NVIDIA-Nemotron-Nano-9B-v2 | same as exp3 | Done | [exp14.md](experiments/exp14.md) |
+| `experiment/exp15/` | E010 | direct | nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 | same as exp3 | Done | [exp15.md](experiments/exp15.md) |
+| `experiment/exp16/` | E010 | reasoning | nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 | same as exp3 | Done | [exp16.md](experiments/exp16.md) |
+| `experiment/exp17/` | E011 | direct | google/gemma-4-E2B-it | same as exp3 | Done | [exp17.md](experiments/exp17.md) |
+| `experiment/exp18/` | E011 | reasoning | google/gemma-4-E2B-it | same as exp3 | Done | [exp18.md](experiments/exp18.md) |
 | `experiment/misc/concise_reasoning_probe/` | -- (misc, not a formal exp) | reasoning | Qwen/Qwen3.5-4B | nq, popqa, hotpotqa (n=150 each) | Done | [README.md](../experiment/misc/concise_reasoning_probe/README.md) |
 
 **Note:** `simpleqa` is registered but disabled (`datasets_registry.py`) --

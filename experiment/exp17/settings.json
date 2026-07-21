@@ -1,0 +1,28 @@
+{
+  "exp_id": "E011",
+  "model": "google/gemma-4-E2B-it",
+  "condition": "direct",
+  "decoding": {
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 64,
+    "max_tokens": 500
+  },
+  "n_examples": 500,
+  "seed": 0,
+  "judge": true,
+  "ex_recall": true,
+  "datasets": [
+    "nq",
+    "triviaqa",
+    "popqa",
+    "hotpotqa",
+    "2wikimultihopqa",
+    "musique",
+    "bamboogle",
+    "simpleqa_verified"
+  ],
+  "eval_base_url": "http://localhost:8000/v1",
+  "judge_model": "gemma-4-31b-it",
+  "extractor_model": "gemma-4-31b-it"
+}

@@ -1,0 +1,27 @@
+{
+  "exp_id": "E009",
+  "model": "nvidia/NVIDIA-Nemotron-Nano-9B-v2",
+  "condition": "direct",
+  "toggle_style": "sysprompt",
+  "decoding": {
+    "temperature": 0.0,
+    "max_tokens": 500
+  },
+  "n_examples": 500,
+  "seed": 0,
+  "judge": true,
+  "ex_recall": true,
+  "datasets": [
+    "nq",
+    "triviaqa",
+    "popqa",
+    "hotpotqa",
+    "2wikimultihopqa",
+    "musique",
+    "bamboogle",
+    "simpleqa_verified"
+  ],
+  "eval_base_url": "http://localhost:8000/v1",
+  "judge_model": "gemma-4-31b-it",
+  "extractor_model": "gemma-4-31b-it"
+}
