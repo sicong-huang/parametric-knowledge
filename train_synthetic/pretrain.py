@@ -18,7 +18,7 @@ import torch
 import torch.distributed as dist
 
 from datasets import Dataset, load_from_disk
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 from trl import SFTConfig, SFTTrainer
 
 
@@ -58,28 +58,39 @@ def main():
     parser.add_argument("--grad-accum", type=int, default=1)
     parser.add_argument("--gradient-checkpointing", action="store_true", default=False)
     parser.add_argument("--lr", type=float, default=3e-4)
+    parser.add_argument("--backend", default="deepspeed", choices=["deepspeed", "fsdp2"])
     parser.add_argument("--ds-stage", type=int, default=2, choices=[0, 1, 2, 3])
+    parser.add_argument("--fsdp-reshard-after-forward", action="store_true", default=False)
     parser.add_argument("--save-steps", type=int, default=500)
     parser.add_argument("--save-strategy", default="steps", choices=["no", "steps", "epoch"])
     parser.add_argument("--note", type=str, default="")
     args = parser.parse_args()
 
-    print(f"DeepSpeed ZeRO stage: {args.ds_stage}")
-
-    ds_config = {
-        "bf16": {"enabled": True},
-        "zero_optimization": {
-            "stage": args.ds_stage,
-            "overlap_comm": args.ds_stage >= 1,
-            "contiguous_gradients": args.ds_stage >= 1,
-            "reduce_scatter": args.ds_stage >= 2,
-        },
-        "gradient_accumulation_steps": "auto",
-        "gradient_clipping": "auto",
-        "train_batch_size": "auto",
-        "train_micro_batch_size_per_gpu": "auto",
-        "wall_clock_breakdown": False,
-    }
+    ds_config = None
+    fsdp = False
+    fsdp_config = None
+    if args.backend == "deepspeed":
+        print(f"DeepSpeed ZeRO stage: {args.ds_stage}")
+        ds_config = {
+            "bf16": {"enabled": True},
+            "zero_optimization": {
+                "stage": args.ds_stage,
+                "overlap_comm": args.ds_stage >= 1,
+                "contiguous_gradients": args.ds_stage >= 1,
+                "reduce_scatter": args.ds_stage >= 2,
+            },
+            "gradient_accumulation_steps": "auto",
+            "gradient_clipping": "auto",
+            "train_batch_size": "auto",
+            "train_micro_batch_size_per_gpu": "auto",
+            "wall_clock_breakdown": False,
+        }
+    else:
+        print("Backend: FSDP2")
+        fsdp = True
+        fsdp_config = {
+            "reshard_after_forward": args.fsdp_reshard_after_forward,
+        }
 
     training_args = SFTConfig(
         output_dir=args.output_dir,
@@ -102,6 +113,8 @@ def main():
         save_strategy=args.save_strategy,
         report_to="none",
         deepspeed=ds_config,
+        fsdp=fsdp,
+        fsdp_config=fsdp_config,
     )
 
     print(f"Loading model: {args.model}")
@@ -113,6 +126,11 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    # generation_config ships with top_p/temperature set but do_sample=False,
+    # which transformers now rejects at save_pretrained (strict validation).
+    if model.generation_config.top_p is not None or model.generation_config.temperature is not None:
+        model.generation_config.do_sample = True
 
     total = sum(p.numel() for p in model.parameters())
     print(f"Parameters: {total:,} (all trainable)")
@@ -155,6 +173,12 @@ def main():
 
     print(f"Saving to {args.output_dir}")
     trainer.save_model(args.output_dir)
+    # Base model may be multimodal (e.g. gemma4); vLLM needs processor_config.json
+    # even for text-only inference, and save_model only writes the tokenizer.
+    try:
+        AutoProcessor.from_pretrained(args.model).save_pretrained(args.output_dir)
+    except Exception as e:
+        print(f"Warning: could not save processor config: {e}")
     print("Done.")
 
     if dist.is_available() and dist.is_initialized():

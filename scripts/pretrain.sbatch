@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ── pretrain job submission wrapper ─────────────────────────────────────────
 # Usage:
-#   ./train_synthetic/submit.sh                                    # sbatch, defaults below
-#   ./train_synthetic/submit.sh --epochs 5 --batch-size 64 --output-dir checkpoints/exp-2
-#   ./train_synthetic/submit.sh --gpus 4 --mem 128G --time 6:00:00 --epochs 10
-#   ./train_synthetic/submit.sh --srun                             # run via srun in this terminal
-#   ./train_synthetic/submit.sh --srun --gpus 1 --epochs 1         # quick interactive test
+#   ./scripts/pretrain.sbatch                                    # sbatch, defaults below
+#   ./scripts/pretrain.sbatch --epochs 5 --batch-size 64 --output-dir checkpoints/exp-2
+#   ./scripts/pretrain.sbatch --gpus 4 --mem 128G --time 6:00:00 --epochs 10
+#   ./scripts/pretrain.sbatch --srun                             # run via srun in this terminal
+#   ./scripts/pretrain.sbatch --srun --gpus 1 --epochs 1         # quick interactive test
 #
 # All flags are optional; unrecognized flags are forwarded to pretrain.py.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -55,18 +55,23 @@ mkdir -p "${OUTPUT_DIR}"
 SLURM_FLAGS=(--partition="${PARTITION}" --account="${ACCOUNT}" --gpus-per-node="${GPUS}"
     --mem="${MEM}" --cpus-per-task="${CPUS}" --time="${TIME}" --job-name="${JOB_NAME}")
 
-TRAIN_CMD=("${REPO_ROOT}/.venv/bin/accelerate" launch --num_processes="${GPUS}" --mixed_precision=bf16
-    --gradient_accumulation_steps="${GRAD_ACCUM}"
-    train_synthetic/pretrain.py --epochs "${EPOCHS}" --batch-size "${BATCH_SIZE}"
-    --grad-accum "${GRAD_ACCUM}" --output-dir "${OUTPUT_DIR}")
-[[ -n "${NOTE}" ]] && TRAIN_CMD+=(--note "${NOTE}")
-TRAIN_CMD+=(${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})
+TRAIN_ARGS=(
+    train_synthetic/pretrain.py
+    --epochs "${EPOCHS}"
+    --batch-size "${BATCH_SIZE}"
+    --grad-accum "${GRAD_ACCUM}"
+    --output-dir "${OUTPUT_DIR}"
+)
+[[ -n "${NOTE}" ]] && TRAIN_ARGS+=(--note "${NOTE}")
+TRAIN_ARGS+=(${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})
 
-echo "[${MODE}] ${JOB_NAME}: ${TRAIN_CMD[*]}"
+JOB_INNER="cd $(printf '%q' "${REPO_ROOT}") && export UV_PROJECT_ENVIRONMENT=/tmp/venv && uv sync --frozen && uv run torchrun --nproc-per-node=${GPUS} $(printf '%q ' "${TRAIN_ARGS[@]}")"
+
+echo "[${MODE}] ${JOB_NAME}: ${JOB_INNER}"
 
 if [[ "${MODE}" == "srun" ]]; then
-    srun "${SLURM_FLAGS[@]}" --pty "${TRAIN_CMD[@]}"
+    srun "${SLURM_FLAGS[@]}" --pty bash -c "${JOB_INNER}"
 else
     sbatch "${SLURM_FLAGS[@]}" --output="${OUTPUT_DIR}/%x_%j.log" \
-        --wrap="$(printf '%q ' "${TRAIN_CMD[@]}")"
+        --wrap="${JOB_INNER}"
 fi
