@@ -25,6 +25,9 @@ Log) and planning doc. Update this row whenever a run's status changes.
 | `experiment/exp17/` | E011 | direct | google/gemma-4-E2B-it | same as exp3 | Done | [exp17.md](experiments/exp17.md) |
 | `experiment/exp18/` | E011 | reasoning | google/gemma-4-E2B-it | same as exp3 | Done | [exp18.md](experiments/exp18.md) |
 | `experiment/misc/concise_reasoning_probe/` | -- (misc, not a formal exp) | reasoning | Qwen/Qwen3.5-4B | nq, popqa, hotpotqa (n=150 each) | Done | [README.md](../experiment/misc/concise_reasoning_probe/README.md) |
+| `experiment/exp19/` | E012 | reasoning | 4 models (gemma-4-E4B/E2B, Nemotron-Nano-9B-v2, Nemotron-3-Nano-4B) | Premise 2 Tier 1 (SAFE observational) -- hotpotqa/2wikimultihopqa/musique/bamboogle | Planned | [exp19.md](experiments/exp19.md) |
+| `experiment/exp20/` | E013 | reasoning | 4 models (gemma-4-E4B/E2B, Nemotron-Nano-9B-v2, Nemotron-3-Nano-4B) | Premise 2 Tier 2 (interventional prefix-corruption causal proof) -- hotpotqa/2wikimultihopqa/musique | Done (v2 -- placebo fixed, DiD +0.068 [+0.004,+0.135] excludes zero, small-n caveat, see exp20.md) | [exp20.md](experiments/exp20.md) |
+| `experiment/exp21/` | E014 | reasoning | (synthetic KG, model TBD) | Premise 2 Tier 3 (synthetic KG replication) | Blocked | [exp21.md](experiments/exp21.md) |
 
 **Note:** `simpleqa` is registered but disabled (`datasets_registry.py`) --
 it needs an LLM-judge grader, not EM, and isn't on the FlashRAG hub. See

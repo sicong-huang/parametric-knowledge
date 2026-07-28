@@ -29,5 +29,6 @@ uv.lock
 
 # generated report(s) in docs/
 docs/*.html
-docs/**/*.htmlpremise2/corpus/traces_manifest.jsonl
+docs/**/*.html
+premise2/corpus/traces_manifest.jsonl
 premise2/corpus/exp20_v1_backup/

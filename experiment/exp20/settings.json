@@ -1,0 +1,26 @@
+{
+  "exp_id": "E013",
+  "description": "Tier 2 (Premise 2): interventional prefix-corruption causal proof. Not a generate.py/run_all.py exp -- uses premise2/scripts/{select_targets,corrupt_fact,force_decode,score_flips,placebo,compare_arms,position_recovery}.py directly on the reasoning-condition traces from experiment/exp{10,14,16,18}. v2 (see exp20.md): fixed a depth confound in the v1 placebo (off-chain sentence selection now position-matched to the on-chain hop's cut depth, off_chain_sentences now positively purity-filtered instead of defined by matcher-failure negation, sentence splitter no longer leaves bare list-marker fragments). v1 corpus/reports preserved under premise2/{corpus,reports}/exp20_v1_backup/.",
+  "condition": "reasoning",
+  "models": [
+    "google/gemma-4-E4B-it",
+    "nvidia/NVIDIA-Nemotron-Nano-9B-v2",
+    "nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16",
+    "google/gemma-4-E2B-it"
+  ],
+  "source_exp_dirs": ["exp10", "exp14", "exp16", "exp18"],
+  "datasets": ["hotpotqa", "2wikimultihopqa", "musique"],
+  "corruption_model": "gemma-4-31b-it",
+  "corruption_base_url": "http://localhost:8000/v1",
+  "n_samples_per_condition": 4,
+  "decoding": {"temperature": 1.0, "top_p": 0.95, "max_tokens": 4096},
+  "corpus_dir": "premise2/corpus",
+  "reports_dir": "premise2/reports",
+  "v2_placebo_fix": {
+    "offchain_disqualify_jaccard_threshold": 0.15,
+    "offchain_question_max_jaccard": 0.2,
+    "offchain_answer_max_jaccard": 0.2,
+    "offchain_min_content_words": 5,
+    "position_match_tolerance_words": 15
+  }
+}
