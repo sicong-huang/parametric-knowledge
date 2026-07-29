@@ -4,3 +4,5 @@ __pycache__/
 checkpoints
 data/
 experiment/
+.cursor/
+.env
