@@ -1,0 +1,32 @@
+{
+  "model": "checkpoints/prime-sft/qwen3.5-0.8b-c2_10pct/checkpoints/step_349/weights",
+  "qa_dir": "qa/test",
+  "stop_token_ids": [
+    248044,
+    248046
+  ],
+  "direct": {
+    "accuracy": 0.1616838077015068,
+    "n": 12543,
+    "1_hop": {
+      "accuracy": 0.255,
+      "n": 6000
+    },
+    "2_hop": {
+      "accuracy": 0.0761118752865658,
+      "n": 6543
+    }
+  },
+  "reasoning": {
+    "accuracy": 0.3396316670652954,
+    "n": 12543,
+    "1_hop": {
+      "accuracy": 0.49016666666666664,
+      "n": 6000
+    },
+    "2_hop": {
+      "accuracy": 0.20158948494574355,
+      "n": 6543
+    }
+  }
+}

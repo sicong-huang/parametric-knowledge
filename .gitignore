@@ -21,3 +21,13 @@ uv.lock
 # generated report(s) in docs/
 docs/*.html
 docs/**/*.html
+# prime-rl SFT/RL artifacts: weights, data and per-example eval outputs live on Hugging Face
+checkpoints/
+pretrain-*/
+qa/
+qa_ambiguous/
+qa.zip
+nohup.out
+*.png
+experiment/prime-*/*.log
+experiment/prime-*/*/*.jsonl

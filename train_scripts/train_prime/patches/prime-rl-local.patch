@@ -1,0 +1,207 @@
+diff --git a/packages/prime-rl-configs/src/prime_rl/configs/sft.py b/packages/prime-rl-configs/src/prime_rl/configs/sft.py
+index 386280efb..acedcfaba 100644
+--- a/packages/prime-rl-configs/src/prime_rl/configs/sft.py
++++ b/packages/prime-rl-configs/src/prime_rl/configs/sft.py
+@@ -79,6 +79,12 @@ class LossMaskConfig(BaseConfig):
+     tool: bool = False
+     """Tool messages contribute to the loss."""
+ 
++    generation_prompt: bool = True
++    """Tokens of the chat template's generation prompt (e.g. Qwen's thinking prefill `<think>\n` or
++    `<think>\n\n</think>\n\n`) contribute to the loss. False masks every token of
++    render(prompt, add_generation_prompt=True), as TRL's prompt-completion SFT does. Only applies to
++    prompt/completion rows. (Local patch, parametric-knowledge.)"""
++
+ 
+ class SFTColumnsConfig(BaseConfig):
+     """Dataset columns the trainer reads. Set a field to read a column under another name."""
+diff --git a/src/prime_rl/inference/patches.py b/src/prime_rl/inference/patches.py
+index 34b9067f0..2b8f9a42f 100644
+--- a/src/prime_rl/inference/patches.py
++++ b/src/prime_rl/inference/patches.py
+@@ -15,6 +15,10 @@ def apply_shared_vllm_patches():
+     from prime_rl.inference.vllm.qwen38_weight_loading import patch_qwen38_weight_loading
+ 
+     patch_gpt_oss_weight_loading()
++    # LOCAL (parametric-knowledge): text-only Qwen3.5 checkpoints
++    from prime_rl.inference.vllm.qwen35_text import register_qwen35_text
++
++    register_qwen35_text()
+     patch_qwen38_weight_loading()
+     _patch_lora_key_prefix()
+     _patch_qwen35_moe_lora_format()
+diff --git a/src/prime_rl/orchestrator/train_source.py b/src/prime_rl/orchestrator/train_source.py
+index 0c7b36428..3f04ba9cc 100644
+--- a/src/prime_rl/orchestrator/train_source.py
++++ b/src/prime_rl/orchestrator/train_source.py
+@@ -2,6 +2,7 @@
+ 
+ from __future__ import annotations
+ 
++import os
+ import random
+ from collections import defaultdict
+ from typing import Any
+@@ -41,7 +42,18 @@ class TrainSource(Reconfigurable):
+         self.weights = [float(ratios[name]) for name in self.env_names]
+ 
+     def next_task(self, *, step: int) -> TaskRequest:
+-        env_name = self.rng.choices(self.env_names, weights=self.weights, k=1)[0]
++        if os.environ.get("PRL_ROUND_ROBIN_SOURCES") == "1":
++            # LOCAL (parametric-knowledge): smooth weighted round-robin instead of a random draw,
++            # so the per-env dispatch counts follow `ratio` exactly (1:1 -> strict alternation).
++            if not hasattr(self, "_rr_credit"):
++                self._rr_credit = [0.0] * len(self.env_names)
++            total = sum(self.weights)
++            self._rr_credit = [c + w for c, w in zip(self._rr_credit, self.weights)]
++            i = max(range(len(self.env_names)), key=lambda j: self._rr_credit[j])
++            self._rr_credit[i] -= total
++            env_name = self.env_names[i]
++        else:
++            env_name = self.rng.choices(self.env_names, weights=self.weights, k=1)[0]
+         return TaskRequest(env_name=env_name, task=next(self.curricula[env_name].sampler), step=step)
+ 
+     def on_result(self, group: list[vf.Episode]) -> bool:
+diff --git a/src/prime_rl/trainer/models/qwen3_5/modeling_qwen3_5.py b/src/prime_rl/trainer/models/qwen3_5/modeling_qwen3_5.py
+index 5c6dcbe7e..79e5b6b5a 100644
+--- a/src/prime_rl/trainer/models/qwen3_5/modeling_qwen3_5.py
++++ b/src/prime_rl/trainer/models/qwen3_5/modeling_qwen3_5.py
+@@ -285,6 +285,11 @@ class Qwen3_5VLMModel(nn.Module):
+ 
+ 
+ class Qwen3_5ForCausalLM(Qwen3_5PreTrainedModel):
++    # Local patch (parametric-knowledge): tie lm_head to embed_tokens for text-only checkpoints with
++    # tie_word_embeddings=true (Qwen3.5-0.8B/2B), like Qwen3ForCausalLM. Consumed by
++    # tools/convert_dcp_to_bf16.py, which drops the tied key on export.
++    _tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}
++
+     def __init__(self, config) -> None:
+         super().__init__(config)
+         self.is_vlm = hasattr(config, "vision_config")
+@@ -297,6 +302,8 @@ class Qwen3_5ForCausalLM(Qwen3_5PreTrainedModel):
+ 
+         self.supports_packed_multimodal_training = self.is_vlm
+         self.lm_head = VanillaOutputLinear(text_config.hidden_size, text_config.vocab_size)
++        if not self.is_vlm and getattr(text_config, "tie_word_embeddings", False):
++            self.lm_head.weight = self.model.embed_tokens.weight
+ 
+     def get_input_embeddings(self) -> nn.Embedding:
+         return self.model.get_input_embeddings()
+diff --git a/src/prime_rl/trainer/sft/data.py b/src/prime_rl/trainer/sft/data.py
+index d7eb05601..30580c741 100644
+--- a/src/prime_rl/trainer/sft/data.py
++++ b/src/prime_rl/trainer/sft/data.py
+@@ -369,6 +369,16 @@ class SFTDataset(StatefulIterableDataset):
+         )
+         input_ids = list(sample.token_ids)
+         loss_mask = list(sample.loss_mask)
++        # Local patch (parametric-knowledge): mask the generation-prompt prefill like TRL.
++        if not self.loss_mask_config.generation_prompt and example.get(self.columns.messages) is None:
++            n_prompt = len(normalize_messages(example[self.columns.prompt], default_role="user"))
++            prompt_ids = renderer.render_ids(messages[:n_prompt], tools=tools, add_generation_prompt=True)
++            if input_ids[: len(prompt_ids)] != prompt_ids:
++                raise ValueError(
++                    f"Example {example.get('__index', '')}: generation-prompt render is not a prefix of the "
++                    "training render, so loss_mask.generation_prompt=false can't mask it"
++                )
++            loss_mask[: len(prompt_ids)] = [False] * len(prompt_ids)
+         mm = sample.multi_modal_data
+         mm_token_type_ids = list(sample.mm_token_type_ids) if sample.mm_token_type_ids is not None else None
+         if mm is not None and mm.mm_items and not self.multimodal:
+diff --git a/src/prime_rl/inference/vllm/qwen35_text.py b/src/prime_rl/inference/vllm/qwen35_text.py
+new file mode 100644
+index 000000000..44c7e69c2
+--- /dev/null
++++ b/src/prime_rl/inference/vllm/qwen35_text.py
+@@ -0,0 +1,91 @@
++"""Serve text-only Qwen3.5 checkpoints (architectures = ["Qwen3_5ForCausalLM"]).
++
++LOCAL patch (parametric-knowledge): vLLM only registers the VL "Qwen3_5ForConditionalGeneration";
++a text-only checkpoint (e.g. one exported by prime-rl SFT) falls back to it and crashes on the
++missing vision_config. Same class as train_synthetic/eval.py, registered from the vLLM plugin so
++prime-rl's inference server can load such models.
++"""
++
++
++def register_qwen35_text() -> None:
++    import inspect
++
++    import numpy as np
++    import torch
++    from vllm import ModelRegistry
++    from vllm.model_executor.layers.mamba.mamba_utils import (
++        MambaStateCopyFuncCalculator,
++        MambaStateDtypeCalculator,
++        MambaStateShapeCalculator,
++    )
++    from vllm.model_executor.models.interfaces import IsHybrid, SupportsMRoPE
++    from vllm.model_executor.models.qwen3_5 import Qwen3_5ForCausalLM as _VllmQwen3_5ForCausalLM
++    from vllm.model_executor.models.utils import AutoWeightsLoader, WeightsMapper
++
++    class Qwen3_5ForCausalLMHF(_VllmQwen3_5ForCausalLM, IsHybrid, SupportsMRoPE):
++        """vllm's registry only maps "Qwen3_5ForConditionalGeneration" (the VL
++        variant); a text-only "Qwen3_5ForCausalLM" checkpoint falls back to it
++        and crashes on the missing vision_config, so we register this class under
++        that name explicitly. It also strips the "language_model." infix HF's
++        checkpoint uses (e.g. "model.language_model.layers...") that vllm's
++        unwrapped "model.layers..." doesn't expect.
++
++        The base text-only class doesn't mix in `IsHybrid` (only the VL wrapper
++        does), so vllm never reconciles the GDN (mamba) state page size against
++        the full-attention page size for it, and KV cache init crashes with
++        "page size of the layer is not divisible by the maximum page size". Mix
++        it in here with the same state-shape/dtype/copy-func classmethods the VL
++        class uses (they only read hf_text_config, nothing VL-specific).
++        """
++
++        hf_to_vllm_mapper = WeightsMapper(orig_to_new_substr={"language_model.": ""})
++
++        def load_weights(self, weights):
++            # vLLM renamed AutoWeightsLoader's `skip_prefixes` to `ignore_unexpected_prefixes`
++            # (e.g. vLLM 0.32 in the prime-rl env); pass whichever this install accepts.
++            params = inspect.signature(AutoWeightsLoader.__init__).parameters
++            kw = "skip_prefixes" if "skip_prefixes" in params else "ignore_unexpected_prefixes"
++            loader = AutoWeightsLoader(self, **{kw: ["mtp."]})
++            return loader.load_weights(weights, mapper=self.hf_to_vllm_mapper)
++
++        @classmethod
++        def get_mamba_state_dtype_from_config(cls, vllm_config):
++            return MambaStateDtypeCalculator.gated_delta_net_state_dtype(
++                vllm_config.model_config.dtype,
++                vllm_config.cache_config.mamba_cache_dtype,
++                vllm_config.cache_config.mamba_ssm_cache_dtype,
++            )
++
++        @classmethod
++        def get_mamba_state_shape_from_config(cls, vllm_config):
++            hf_config = vllm_config.model_config.hf_text_config
++            num_spec = (
++                vllm_config.speculative_config.num_speculative_tokens
++                if vllm_config.speculative_config
++                else 0
++            )
++            return MambaStateShapeCalculator.gated_delta_net_state_shape(
++                vllm_config.parallel_config.tensor_parallel_size,
++                hf_config.linear_num_key_heads,
++                hf_config.linear_num_value_heads,
++                hf_config.linear_key_head_dim,
++                hf_config.linear_value_head_dim,
++                hf_config.linear_conv_kernel_dim,
++                num_spec,
++            )
++
++        @classmethod
++        def get_mamba_state_copy_func(cls):
++            return MambaStateCopyFuncCalculator.gated_delta_net_state_copy_func()
++
++        def get_mrope_input_positions(self, input_tokens, mm_features):
++            """Text-only reduction of Qwen3VL's mrope position calc: with no
++            mm_features the T/H/W position ids are all just the sequential text
++            position, so this is equivalent to plain 1D rope broadcast 3x.
++            """
++            assert not mm_features, "text-only reduction; not valid for multimodal input"
++            text_len = len(input_tokens)
++            positions = np.broadcast_to(np.arange(text_len), (3, text_len))
++            return torch.from_numpy(positions.copy()), 0
++
++    ModelRegistry.register_model("Qwen3_5ForCausalLM", Qwen3_5ForCausalLMHF)
